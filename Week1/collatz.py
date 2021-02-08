@@ -26,7 +26,7 @@ def calc_collatz_len(n):
 
 def calc_collatz_paths(numlist):
     """
-    this will be used to calculate the collatz path of each number in the passed list
+    This function is used to calculate the collatz path of each number in the passed numlist
     """
     num_collatz_lens = [0] * len(numlist)  # creating zero array the length of the passed numlist
 
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     plt.xlabel('Integers')
     plt.ylabel('Respective Collatz Paths')
     # creating tile
-    plt.title(f'Graph of Collatz paths of all integers up until {str(user_bound)}')
+    plt.title(f'Graph of Collatz paths of all integers up until {user_bound}')
     # showing our plot
     plt.show()
     # printing num w/ the highest collatz path to terminal
