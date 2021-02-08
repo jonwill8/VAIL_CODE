@@ -15,7 +15,7 @@ def point_in_circle(x, y):
     is within the area bound of a circle defined by the EQ:
     (x-0.5)^2 + (y-0.5)^2 = (0.5)^2
     """
-    return ((x - 0.5)**2 + (y - 0.5)**2) <= (0.5**2)
+    return ((x - 0.5) ** 2 + (y - 0.5) ** 2) <= (0.5 ** 2)
 
 
 def gen_random_points():
