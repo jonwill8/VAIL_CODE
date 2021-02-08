@@ -57,6 +57,10 @@ def process_words():
 
 
 def calc_letters(word_list):
+    """
+    This function accepts an array of words and returns the occurances of letters in that array
+    Letter Frequencies are maintained in a dictionary of letter:occurances
+    """
     # appending init counts to our dictionary
     letters_dict = {char: 0 for char in 'abcdefghijklmnopqrstuvwxyz'}
     # iterating over each word in the word list
