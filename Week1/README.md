@@ -30,4 +30,23 @@ ___
     other data analysis libraries because SKL is only concered with ML & data modeling. It is not meant
     for data visualization and thus cannot plot/represent data without the assitance of the helper modules 
     it is built upon such as pandas/matplotlib
-___
+
+## Reflection - 2/10/21
+
+### Question 1
+    Tensors are a more generalized form of vectors we are all comfortable with. Tensors are more powerful than 
+    vectors becuase they allow us to explore mathematical operations in higher dimensons (ex: calculating
+    all forces acting on the interior of a solid object). While vectors can be though of as having components with
+    singular direction (i,j,k), tensors can be thought of as having compnents with multiple directions (ex: ii or jk).
+    The complexity of a tensor scales with its rank. A tensor of rank n with have 3^n compnents 
+    (rank 0 tensor = a 1 component scalar, rank 1 tensor = a 3 component vector, rank 2 tensor will have 9 compnents).
+
+    Tensors are important in ML becuase they are very effective at describing multidimensional datasets. From 
+    what I have coded already, it seems tensors/vectors are a much more efficent means to store model parameter 
+    values (when you are mapping each weight to its corresponding input variable, you would only have to take a
+    dot product between the weight tensor/vector and the input variable value vector). I hope to gain a deeper understanding
+    of tensors over time as the topic is nontrivial and hard to grasp for a beginner like myself.
+
+### Question 2
+    One thing I noticed is tensorflow computations are applied elementwise to each input vector
+
