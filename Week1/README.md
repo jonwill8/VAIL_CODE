@@ -26,4 +26,8 @@ ___
     that the model can find patterns in the data which are unapparent to humans. Unsupervised models 
     are generally more complex and it is harder to rate the accuracy of an unsupervised ML model.
 ### Question 2
+    I believe that SKL does NOT have the power to visualize data without a Graphviz, Pandas, or 
+    other data analysis libraries because SKL is only concered with ML & data modeling. It is not meant
+    for data visualization and thus cannot plot/represent data without the assitance of the helper modules 
+    it is built upon such as pandas/matplotlib
 ___
