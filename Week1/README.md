@@ -50,3 +50,22 @@ ___
 ### Question 2
     One thing I noticed is tensorflow computations are applied elementwise to each input vector
 
+## Reflection - 2/11/21
+
+
+    As I have worked on previous oncology projects, I wanted to see if a neural network could classify images 
+    of melanomas as either benign or malignant. I found this dataset which contains 1000s of images that can be 
+    used to train an ANN (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6091241/). 
+
+    If I were to build a ANN to attack this problem, the model would have a massive initial input layer as each 
+    image pixel (or maybe pixel region) will be tied with a weight. The model would then have a 
+    series of hidden layers until it reaches a final output layer which would classify the melanoma image as either 
+    benign (0) or malignant (1). While I have only truly studied 1 activation function (sigmoidal) I think it would it 
+    would work well for this theoretical project as sigmoidal is great at binary classification. 
+
+    Since I will not have to build the model from scratch myself, I imagine the hardest part of performing 
+    this project would be figuring out how to efficiently convert each training data image into a
+    collection of numbers (maybe decomposing the image into RGB arrays?). Exciting Stuff. 
+
+
+
