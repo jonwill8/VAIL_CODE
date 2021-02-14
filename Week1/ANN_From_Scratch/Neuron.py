@@ -24,14 +24,7 @@ class Neuron:
             Once Implemented, this method will adjust our parameters during the backpropagation process
     """
 
-    def __init__(self, X, W, activation_func):
-        """
-        Constructor for our Neuron
-        X = complete input vector w/ bias complement of 1 added as last term
-        W = complete weight vector with bias as last term
-        """
-        self.X = X
-        self.W = W
+    def __init__(self, activation_func):
         if activation_func.lower() == 'sigmoid':
             self.activation_func = 'sigmoid'
         elif activation_func.lower() == 'tanhyp':
@@ -41,10 +34,14 @@ class Neuron:
         else:
             raise Exception("Must Provide a Valid Activation Function (Sigmodial, Hyperbolic Tangent, ReLU) for Neuron")
 
-    def output(self):
+    def output(self,X):
         """
         Returns our numeric neuron output after applying appropriate activation_func
+        X = complete input vector w/ bias complement of 1 added as last term
+        W = complete weight vector with bias as last term
         """
+        self.X = X
+
         # z represents our complete neuron input of x1w1 + x2w2 + ... xnwn + bias
         z = np.dot(self.X, self.W)
 
@@ -55,6 +52,15 @@ class Neuron:
             return self.tangent_hyperbolic(z)
         elif self.activation_func == 'rectified_linear':
             return self.rectified_linear(z)
+
+    def init_weights(self,W):
+        """
+        This function initilizes our model weights to the provided W vector
+        """
+        self.W = W
+
+    def update_weights(self,learn_rate,partial_wrt_weight):
+        self.W = self.W - learn_rate*partial_wrt_weight
 
     def sigmoid(self, z):
         """
@@ -74,9 +80,6 @@ class Neuron:
         """
         return max(0, z)
 
-    def update_params(self):
-        pass
-
     def __repr__(self):
         return f'{self.__class__.__name__}(Input Vector: {self.X}, Weight Vector: {self.W}, ' \
                f'Activation Function: {self.activation_func})'
@@ -90,6 +93,7 @@ if __name__ == '__main__':
     inputs = np.array([1, 2, 3, 1])
     weights = np.array([1, 5, 10, 0])
     act_func = 'sigmoid'
-    n1 = Neuron(inputs, weights, act_func)
+    n1 = Neuron(act_func)
+    n1.init_weights(weights)
+    print(n1.output(inputs))
     print(n1)
-    print(n1.output())
