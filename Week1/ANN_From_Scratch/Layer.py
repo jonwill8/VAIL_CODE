@@ -59,7 +59,7 @@ class Layer:
 
                 #initilizing weights
                 weights = np.array([np.random.normal(scale=scaler) for _ in range(fan_in)])
-                weights = np.append(weights, 0)  # addding intial 0 bias term
+                weights = np.append(weights, 1)  # addding intial 0 bias term
 
                 #creating neuron obj
                 neuron = Neuron(self.neuron_activation_func)
@@ -84,7 +84,7 @@ class Layer:
         returns a vector which is the result of feeding the z vector to the derivative of our activation functions
         ** where the z vector in each row corresponds to the ith neuron's WX dot product
         """
-        z_vec = np.array([neuron.Z for neuron in self.layer])
+        z_vec = np.array([[neuron.Z] for neuron in self.layer])
         if self.neuron_activation_func == 'sigmoid':
             z_vec = nm.sigmoid_prime(z_vec)
         elif self.neuron_activation_func == 'tangent_hyperbolic':
@@ -98,11 +98,11 @@ class Layer:
     def update_weights(self,learn_rate,partial_error):
         #updating each neuron with its new weights
         self.log_old_weights()
-        for index,partial_error in enumerate(partial_error):
-            #pulling ith neuron's partial error value
-            partial_e = partial_error[index]
-            #updating the value of the ith neuron weights
-            self.layer[index].update_weights(learn_rate,partial_e)
+        for index in range(partial_error.shape[0]):
+            #pulling the ith neuron
+            neuron = self.layer[index]
+            #updating the weights of this neuron
+            neuron.update_weights(learn_rate,partial_error[index])
 
 
     def log_old_weights(self):
@@ -110,7 +110,7 @@ class Layer:
         this backpropogation helper method is used to create a temp IV of the layer's
         old neuron weight values before they are updated durng backprop
         """
-        self.old_weights = np.array([nueron.W for neuron in self.layer])
+        self.old_weights = np.array([self.layer[index].W[:-1] for index in range(len(self.layer))])
 
 
     def __repr__(self):

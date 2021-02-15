@@ -3,13 +3,20 @@ This script contains the Macro Network Class for our fully connected ANN
 This ANN will perform both Binary classification (log loss GD optimization) and regression (MSE loss GD optimization)
 """
 
+
 #making nessacary imports
 from Layer import Layer
 import numpy as np
 import math
 
 #TODO Implement Parameter Regularization Technqiues (ex: Neuron Dropout)
+#TODO Watch if bias optimizes!
+#TODO Analyze the fllowing:
+""" 
+If the NN is a regressor, then the output layer has a single node.
 
+If the NN is a classifier, then it also has a single node unless softmax is used in which case the output layer has one node per class label in your model.
+"""
 class Network:
 
     def __init__(self,cost_func,x_train,y_train,x_test,y_test,epoch_num,batch_size,layer_num,learn_rate):
@@ -133,7 +140,7 @@ class Network:
         partial_error = 1
 
         #iterating backwards through the self.network Layer np array
-        for index in range(len(self.network),-1,-1):
+        for index in range(len(self.network)-1,-1,-1):
             #pulling layers in reverse
             curr_layer = self.network[index]
 
@@ -142,9 +149,9 @@ class Network:
 
                 #calculating average cost func prime value
                 if self.cost_func == 'mse':
-                    partial_error *= mse_prime(y_predictions_vector, y_observation_vector)
+                    partial_error *= self.mse_prime(y_predictions_vector, y_observation_vector)
                 elif self.cost_func == 'log-loss':
-                    partial_error *= log_loss_prime(y_predictions_vector, y_observation_vector)
+                    partial_error *= self.log_loss_prime(y_predictions_vector, y_observation_vector)
 
                 #pulling the input vector which feed into the output layer
                 curr_layer_input_vec = self.network[index-1].output_vec
@@ -152,13 +159,23 @@ class Network:
                 #scaling error by the curr_layer backprop z prime vector
                 z_prime_vec = curr_layer.backpropogate()
 
-                partial_error*=z_prime_vec
+                partial_error*=z_prime_vec.T
 
-                #scaling error by the hanging x varaible (prev_layer_output_vec)
+                # NOTE: before you multiply by the input vector to a layer, set a variable as the current
+                # running error (this is partial for bias).
 
-                #Note: We change the error var b/c we need to pass back a running error vector
+                #setting bias
+                partial_bias = partial_error
+
+                #recall: We change the error var b/c we need to pass back the running error vector
                 partial_error_output = partial_error
-                partial_error_output*=curr_layer_input_vec
+
+                partial_error_output = partial_error_output*curr_layer_input_vec
+
+                #appending partial bias to end of partial error vector
+                partial_error_output = np.append(partial_error_output,partial_bias,axis=1)
+
+                #updating params
                 curr_layer.update_weights(self.learn_rate,partial_error_output)
 
             elif curr_layer.layer_type == 'hidden':
@@ -172,12 +189,20 @@ class Network:
                 z_prime_vec = curr_layer.backpropogate()
 
                 #updating the partial error accordingly
-                partial_error*=next_layer_old_weights
-                partial_error*=z_prime_vec
+                partial_error = partial_error.T*next_layer_old_weights
+                partial_error *= z_prime_vec.T
+
+                # holding our partial bias
+                partial_bias = partial_error
 
                 #switching var to preserve the passing back of the running error vector
                 partial_error_hidden = partial_error
+
+                #multiplying our errors by associated input vector to the layer
                 partial_error_hidden*=curr_layer_input_vec
+
+                #adding bias partial back in
+                partial_error_hidden = np.append(partial_error_hidden,partial_bias,axis=1)
 
                 # updating params
                 curr_layer.update_weights(self.learn_rate,partial_error_hidden)
@@ -193,10 +218,21 @@ class Network:
                 z_prime_vec = curr_layer.backpropogate()
 
                 # updating the partial error accordingly (we do not actually have to sub a var b/c this is the last layer)
-                partial_error *= next_layer_old_weights
-                partial_error *= z_prime_vec
+
+                partial_error = partial_error.T*next_layer_old_weights
+
+                partial_error*=z_prime_vec.T
+
+                #holding the bias
+                partial_bias = partial_error
+
                 partial_error_input = partial_error
-                partial_error_input *=curr_layer_input_vec
+
+                partial_error_input = partial_error_input.T*curr_layer_input_vec
+
+                #adding bias back in
+                partial_error_input = np.append(partial_error_input,partial_bias.T,axis=1)
+
                 # updating params
                 curr_layer.update_weights(self.learn_rate, partial_error_input)
 
@@ -210,26 +246,26 @@ class Network:
         This function returns the means squared error associated with our prediction vector
         Used for printing how our model is fitting to the data each epoc (regression)
         """
-        return 1/self.batch_size*sum(y_observation-y_prediction)**2
+        return 1/self.batch_size*np.sum((y_observation_vector-y_predictions_vector)**2)
 
     def mse_prime(self,y_predictions_vector,y_observation_vector):
         """
         This function returns the derivative of mse w.r.t the y_predictions_vector. Used in backprop
         """
-        return -2/self.batch_size*sum(y_observation-y_prediction)**2
+        return -2/self.batch_size*np.sum((y_observation_vector-y_predictions_vector)**2)
 
     def log_loss_error(self,y_predictions_vector,y_observation_vector):
         """
         This function returns the log loss error associated with our prediction vector
         Used for printing how our model is fitting to the data each epoc (classification)
         """
-        return -1/self.batch_size*sum(y_observation*np.log(y_prediction)+(1-y_observation)*np.log(1-y_prediction))
+        return -1/self.batch_size*np.sum(y_observation_vector*np.log(y_predictions_vector)+(1-y_observation_vector)*np.log(1-y_predictions_vector))
 
     def log_loss_prime(self,y_predictions_vector,y_observation_vector):
         """
         This function returns the derivative of log loss w.r.t the y_predictions_vector. Used in backprop
         """
-        return 1/self.batch_size*sum(-(y_observation/y_prediction)+(1-y_observation)/(1-y_prediction))
+        return 1/self.batch_size*np.sum(-(y_observation_vector/y_predictions_vector)+(1-y_observation_vector)/(1-y_predictions_vector))
 
     def test(self):
         """
@@ -265,12 +301,13 @@ if __name__ == '__main__':
     y_train = np.array([[0],[1],[1],[0]])
     x_test = np.array([[0,0],[0,0],[0,1],[0,1],[1,0],[1,0],[1,1]])
     y_test = np.array([[0],[0],[1],[1],[1],[1],[0]])
-    network = Network('mse',x_train,y_train,x_test,y_test,epoch_num=3,batch_size=2,layer_num=2,learn_rate=0.01)
+    model = Network('mse',x_train,y_train,x_test,y_test,epoch_num=1000,batch_size=2,layer_num=2,learn_rate=0.001)
     #adding input layer
-    network.add_Layer(2,'sigmoid','input',1)
+    model.add_Layer(2,'sigmoid','input',1)
     #addding output layer
-    network.add_Layer(1, 'sigmoid', 'output', 1)
+    model.add_Layer(1, 'sigmoid', 'output', 1)
     #training model functionality
-    network.train()
+    model.train()
     #testing model
+    model.test()
 
