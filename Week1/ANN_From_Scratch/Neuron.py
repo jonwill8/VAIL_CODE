@@ -4,7 +4,7 @@ This script contains the Neuron Class for utility in our FC ANN
 
 # making necessary imports
 import numpy as np
-
+import Neuron_Math as nm
 
 class Neuron:
     """
@@ -44,14 +44,15 @@ class Neuron:
 
         # z represents our complete neuron input of x1w1 + x2w2 + ... xnwn + bias
         z = np.dot(self.X, self.W)
+        self.Z = z
 
         # applying appropriate non-linear activation function & returning neuron output
         if self.activation_func == 'sigmoid':
-            return self.sigmoid(z)
+            return nm.sigmoid(z)
         elif self.activation_func == 'tangent_hyperbolic':
-            return self.tangent_hyperbolic(z)
+            return nm.tangent_hyperbolic(z)
         elif self.activation_func == 'rectified_linear':
-            return self.rectified_linear(z)
+            return nm.rectified_linear(z)
 
     def init_weights(self,W):
         """
@@ -61,24 +62,6 @@ class Neuron:
 
     def update_weights(self,learn_rate,partial_wrt_weight):
         self.W = self.W - learn_rate*partial_wrt_weight
-
-    def sigmoid(self, z):
-        """
-        Sigmodial Nonlinear Activation Function
-        """
-        return 1 / (1 + np.exp(-z))
-
-    def tangent_hyperbolic(self, z):
-        """
-        Hyperbolic Tangent Nonlinear Activation Function
-        """
-        return np.tanh(z)
-
-    def rectified_linear(self, z):
-        """
-        ReLU Nonlinear Activation Function
-        """
-        return max(0, z)
 
     def __repr__(self):
         return f'{self.__class__.__name__}(Input Vector: {self.X}, Weight Vector: {self.W}, ' \

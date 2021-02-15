@@ -8,27 +8,10 @@ from Layer import Layer
 import numpy as np
 import math
 
+#TODO Implement Parameter Regularization Technqiues (ex: Neuron Dropout)
+
 class Network:
-    """
-    Instance Variables
-    Cost Function Selection --> MSE or Log Loss
-    x train Data --> must be a single row/column vector
-    y Train Data --> must be a single row/column vector
-        NOTE: in constructor, concatenate the x/y train data into a single np array to aid w/ shuffling
-    x test Data --> must be a single row/column vector
-    y test Data --> must be a single row/column vector
-    split_index --> the index we use to split x/y training data in our train data np array
-    epoch_num --> number of epochs we train our model
-    self.network --> Our initial empty np array of Layers
-    batch_size --> the batch size we will split our training data into
-        ex: batch size of 3 means splitting train data into thirds
-            will have to use floor of x train Data/batch size
-                on last batch will take last row index --> rest of array
-        note: this batch_size must be less than 1/2 of x data size
-    learning rate
-    layer_num --> number of layers this ANN will have (helper for add layer method)
-    note: self.predictions is a column array which is dynamiclly recreated every batch
-    """
+
     def __init__(self,cost_func,x_train,y_train,x_test,y_test,epoch_num,batch_size,layer_num,learn_rate):
         #init appropriate IVs
         if cost_func.lower() not in('mse','log-loss'):
@@ -63,7 +46,7 @@ class Network:
             fan_in = self.train_split_index
         else:
             #fan_in for hidden/output layer is simply the depth (neuron #) of the previous layer
-            fan_in = self.network[-1].neuron_number
+            fan_in = self.network[add_index-1].neuron_number
 
         #calculating the fan_our of this new layer
         if layer_type.lower() == 'output':
@@ -88,7 +71,6 @@ class Network:
          [input vec n]
                       ]
         the actual input matrix is a subslice of our entire training data
-        (we will handle the subslicing use batch numbers and an index var in train function)
         """
         #defining function to recursively pull the output of the last layer
         def recur_output(layer_index,input_vector):
@@ -102,15 +84,193 @@ class Network:
         #The outut_vec has the # of rows as our x_train_subset matrix
         #The output_vec has the # of columns as out y_train/y_test matrix
         output_vec = np.zeros((x_train_subset.shape[0],self.y_test.shape[1]))
-        #calculating model output vector and keeping track in matri
+        #calculating model output vector and keeping track in matrix
         for row_index in range(x_train_subset.shape[0]):
             #pulling the ith input vector from our x_train subset matrix
             curr_input_vec = x_train_subset[row_index,:]
             #pulling the model output w.r.t the ith input vector
-            curr_output_vec = recur_output(self.layer_num-1,input_vector)
+            curr_output_vec = recur_output(self.layer_num-1,curr_input_vec)
             #appending our model output prediction to our output vector
             output_vec[row_index,:] = curr_output_vec
 
+        #returning our matrix of model predictions
+        return output_vec
+
+    def train(self):
+        """
+        This method trains our model to the x/y training data.
+        """
+        for epoch in range(self.epoch_num):
+            #shuddling training data
+            np.random.shuffle(self.train_data)
+            if self.train_data.shape[0] % self.batch_size != 0:
+                #cheking to make sure batches can be split even;y
+                raise Exception('Batch_size must evenly divide training data!')
+            else:
+                for sub_data in np.split(self.train_data, self.batch_size):
+                    #spltting subdata into x input vector and associated y output  vector
+                    x_train_subset,y_train_subset = sub_data[:,:self.train_split_index], sub_data[:,self.train_split_index:]
+
+                    #pulling our model's prediciton matrix on the x_train_subset data
+                    prediction_matrix = np.array([self.forward_propogate(x_train_subset)])
+
+                    #printing model error every prediction batch
+                    if self.cost_func == 'mse':
+                        print_error = self.mean_squared_error(prediction_matrix,y_train_subset)
+                    elif self.cost_func == 'log-loss':
+                        print_error = self.log_loss_error(prediction_matrix, y_train_subset)
+                    print(f'Current Model Error {print_error}')
+
+                    #updating params via graident descent + backpropogation
+                    self.backprop(x_train_subset,prediction_matrix,y_train_subset)
+
+           #printing epoch number
+            print(f'Epoch # {epoch+1}')
+
+
+    def backprop(self,x_inputs_vector,y_predictions_vector,y_observation_vector):
+        # init backpropogating error variable
+        partial_error = 1
+
+        #iterating backwards through the self.network Layer np array
+        for index in range(len(self.network),-1,-1):
+            #pulling layers in reverse
+            curr_layer = self.network[index]
+
+            if curr_layer.layer_type == 'output':
+                #finding partial w.r.t weights in the current layer
+
+                #calculating average cost func prime value
+                if self.cost_func == 'mse':
+                    partial_error *= mse_prime(y_predictions_vector, y_observation_vector)
+                elif self.cost_func == 'log-loss':
+                    partial_error *= log_loss_prime(y_predictions_vector, y_observation_vector)
+
+                #pulling the input vector which feed into the output layer
+                curr_layer_input_vec = self.network[index-1].output_vec
+
+                #scaling error by the curr_layer backprop z prime vector
+                z_prime_vec = curr_layer.backpropogate()
+
+                partial_error*=z_prime_vec
+
+                #scaling error by the hanging x varaible (prev_layer_output_vec)
+
+                #Note: We change the error var b/c we need to pass back a running error vector
+                partial_error_output = partial_error
+                partial_error_output*=curr_layer_input_vec
+                curr_layer.update_weights(self.learn_rate,partial_error_output)
+
+            elif curr_layer.layer_type == 'hidden':
+                #pulling the input vector which fed into this hidden layer
+                curr_layer_input_vec = self.network[index-1].output_vec
+
+                #pulling the old weights of the proceeding layer
+                next_layer_old_weights =  self.network[index+1].old_weights
+
+                #pulling the z_prime vec associate with this layer
+                z_prime_vec = curr_layer.backpropogate()
+
+                #updating the partial error accordingly
+                partial_error*=next_layer_old_weights
+                partial_error*=z_prime_vec
+
+                #switching var to preserve the passing back of the running error vector
+                partial_error_hidden = partial_error
+                partial_error_hidden*=curr_layer_input_vec
+
+                # updating params
+                curr_layer.update_weights(self.learn_rate,partial_error_hidden)
+
+            elif curr_layer.layer_type == 'input':
+                #pulling the input vector which fed into this input layer (the x data)
+                curr_layer_input_vec = x_inputs_vector
+
+                # pulling the old weights of the proceeding layer
+                next_layer_old_weights = self.network[index + 1].old_weights
+
+                # pulling the z_prime vec associate with this layer
+                z_prime_vec = curr_layer.backpropogate()
+
+                # updating the partial error accordingly (we do not actually have to sub a var b/c this is the last layer)
+                partial_error *= next_layer_old_weights
+                partial_error *= z_prime_vec
+                partial_error_input = partial_error
+                partial_error_input *=curr_layer_input_vec
+                # updating params
+                curr_layer.update_weights(self.learn_rate, partial_error_input)
+
+        #resetting each layer's old_weights IV to Nones
+        for layer in self.network:
+            layer.old_weights = None
+
+
+    def mean_squared_error(self,y_predictions_vector,y_observation_vector):
+        """
+        This function returns the means squared error associated with our prediction vector
+        Used for printing how our model is fitting to the data each epoc (regression)
+        """
+        return 1/self.batch_size*sum(y_observation-y_prediction)**2
+
+    def mse_prime(self,y_predictions_vector,y_observation_vector):
+        """
+        This function returns the derivative of mse w.r.t the y_predictions_vector. Used in backprop
+        """
+        return -2/self.batch_size*sum(y_observation-y_prediction)**2
+
+    def log_loss_error(self,y_predictions_vector,y_observation_vector):
+        """
+        This function returns the log loss error associated with our prediction vector
+        Used for printing how our model is fitting to the data each epoc (classification)
+        """
+        return -1/self.batch_size*sum(y_observation*np.log(y_prediction)+(1-y_observation)*np.log(1-y_prediction))
+
+    def log_loss_prime(self,y_predictions_vector,y_observation_vector):
+        """
+        This function returns the derivative of log loss w.r.t the y_predictions_vector. Used in backprop
+        """
+        return 1/self.batch_size*sum(-(y_observation/y_prediction)+(1-y_observation)/(1-y_prediction))
+
+    def test(self):
+        """
+        This method tests our model against the test data & provides and accuracy heuristic
+        """
+        if self.cost_func =='mse': #this is a regression model, use RMSE
+            model_predictions = self.forward_propogate(self.x_test)
+            #calculating & displayinf RMSE
+            RMSE = (self.mean_squared_error(model_predictions,self.y_test))**0.5
+            print(f'Regression Model has an RMSE accuracy of: {RMSE}')
+
+        elif self.cost_func =='log-liss': #this is a classifier model, use 0.5 prediction cutoff
+            model_predictions = self.forward_propogate(self.x_test)
+            right_predicts = 0
+            for prediction , observation in zip(model_predictions,self.y_test):
+                if observation==1 and 0.5<=prediction<=1:
+                    right_predicts+=1
+                elif observation==0 and 0<=prediction<0.5:
+                    right_predicts+=1
+                else:
+                    pass
+            model_accuracy = right_predicts/model_predictions.shape[0] * 100
+            printf(f'The Classification Model has an accuracy of {model_accuracy}%')
+
+    def __repr__(self):
+        return f'Network trained with {self.cost_func} Cost Function. Layers: \n' \
+               f'{self.network}'
+
 
 if __name__ == '__main__':
-    pass
+    #testing the forward propogation of a network which solves the XOR problem
+    x_train = np.array([[0,0],[1,0],[0,1],[1,1]])
+    y_train = np.array([[0],[1],[1],[0]])
+    x_test = np.array([[0,0],[0,0],[0,1],[0,1],[1,0],[1,0],[1,1]])
+    y_test = np.array([[0],[0],[1],[1],[1],[1],[0]])
+    network = Network('mse',x_train,y_train,x_test,y_test,epoch_num=3,batch_size=2,layer_num=2,learn_rate=0.01)
+    #adding input layer
+    network.add_Layer(2,'sigmoid','input',1)
+    #addding output layer
+    network.add_Layer(1, 'sigmoid', 'output', 1)
+    #training model functionality
+    network.train()
+    #testing model
+

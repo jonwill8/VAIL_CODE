@@ -1,17 +1,12 @@
 """
 This Script contains the Layer class for our FC ANN
 """
-#TODO Figure out how if you need to vectorize entire Layer Object and Eliminate Neuron Class
-#TODO Create Network Class
-#TODO Implemnt both MSE Cost Function for Regression & Log Loss Cost Function for Classification
-#TODO Derive and Iterative/Recursive Process to Update all Parameters in the Model During BackProp (Finding Partials)
-#TODO Create Good for Gradient Descent Algo (Semi-Batch)
 #TODO Experiment with enforcing Data Standardization
-#TODO Experiment with Parameter Regularization Technqiues (ex: Neuron Dropout)
 
 #making nessacary imports
 from Neuron import Neuron
 import numpy as np
+import Neuron_Math as nm
 import math
 
 class Layer:
@@ -80,11 +75,43 @@ class Layer:
             ex: [x1,x2,x3,...xn,1] %1 added to complement each Neuron's bias term
         """
         input_vec = np.append(input_vec,1)
-        return np.array([neuron.output(input_vec) for neuron in self.layer])
+        self.output_vec = np.array([neuron.output(input_vec) for neuron in self.layer])
+        return self.output_vec
 
 
-    def backpropogate(self,learning_rate):
-        pass
+    def backpropogate(self):
+        """
+        returns a vector which is the result of feeding the z vector to the derivative of our activation functions
+        ** where the z vector in each row corresponds to the ith neuron's WX dot product
+        """
+        z_vec = np.array([neuron.Z for neuron in self.layer])
+        if self.neuron_activation_func == 'sigmoid':
+            z_vec = nm.sigmoid_prime(z_vec)
+        elif self.neuron_activation_func == 'tangent_hyperbolic':
+            z_vec =  nm.tangent_hyperbolic_prime(z_vec)
+        elif self.neuron_activation_func == 'rectified_linear':
+            z_vec = nm.rectified_linear_prime(z_vec)
+        return z_vec
+
+
+
+    def update_weights(self,learn_rate,partial_error):
+        #updating each neuron with its new weights
+        self.log_old_weights()
+        for index,partial_error in enumerate(partial_error):
+            #pulling ith neuron's partial error value
+            partial_e = partial_error[index]
+            #updating the value of the ith neuron weights
+            self.layer[index].update_weights(learn_rate,partial_e)
+
+
+    def log_old_weights(self):
+        """
+        this backpropogation helper method is used to create a temp IV of the layer's
+        old neuron weight values before they are updated durng backprop
+        """
+        self.old_weights = np.array([nueron.W for neuron in self.layer])
+
 
     def __repr__(self):
         return f'{self.layer_type.title()} Layer with {self.neuron_number} {self.neuron_activation_func} Comprising Neurons. \n' \
