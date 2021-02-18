@@ -36,14 +36,13 @@ def rectified_linear(z):
     """
     ReLU Nonlinear Activation Function
     """
-    return max(0, z)
+    zero_arr = np.zeros(z.shape)
+    return np.maximum(zero_arr,z)
 
 def rectified_linear_prime(z):
     """
     Returns Derivative of ReLU Nonlinear Activation Function
     """
-    relu_val = rectified_linear(z)
-    if relu_val<=0:
-        return 0
-    else:
-        return 1
+    z[z>0]=1
+    z[z<=0]=0
+    return z

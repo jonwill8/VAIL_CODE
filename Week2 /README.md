@@ -26,6 +26,13 @@ ___
     (ex: disparities in arrest rates betwen black/white neighborhoods). Any criminal data feed into this model contains 
     intrinsic bias, thus the final model will spit our biased results. I selected this particular AI model becuase it
     was implemented in the area I live (South FL).
-    
+
+## Reflection - 2/17/21
+    Differences:
+        * A CNN has Convlution/Pooling Layers which process and condense 2d matrix data, while a FC ANN does not have Convlution/Pooling Layers
+        * A CNN is tailored for image classification, while a general FC ANN can perform more general tasks such as regression
+        * An FC ANN can only be feed vectorized (nx1) input data while a CNN can be feed (n,n) image data input
+        * All CNN's contain a FC ANN as a compnent, but the inverse is not true.
+        
     
 

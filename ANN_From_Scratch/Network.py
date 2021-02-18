@@ -8,6 +8,7 @@ This ANN will perform both Binary classification (log loss GD optimization) and 
 from Layer_V2 import Layer2
 import numpy as np
 import math
+import matplotlib.pyplot as plt
 
 #TODO Implement Parameter Regularization Technqiues (ex: Neuron Dropout)
 #TODO TRACE BACKPROPOGATION METHOD. I SUSPECT WEIGHT MATRICES ARE CHANGING 
@@ -25,7 +26,7 @@ class Network:
         else:
             self.cost_func = cost_func.lower()
         #check to ensure all data is in 2d vectors
-        if x_train.ndim==1 or y_train.ndim==1 or x_test.ndim==1 or y_test .ndim==1:
+        if x_train.ndim==1 or y_train.ndim==1 or x_test.ndim==1 or y_test.ndim==1:
             raise Exception('Passed Train & Tese Data must be wrapped in a 2d numpy array!')
         #creating np array which holds both x_train & associated y train
         #note: you split the train_data np array at the self.split index
@@ -41,6 +42,7 @@ class Network:
         self.layer_num = layer_num
         self.layer_depths = layer_depths
         self.learn_rate = learn_rate
+        self.error_log = np.zeros((self.epoch_num*self.batch_size))
 
     def add_Layer(self,neuron_activation_func,layer_type):
         """
@@ -102,7 +104,7 @@ class Network:
             #pulling the model output w.r.t the ith input vector
             curr_output_vec = recur_output(self.layer_num-1,curr_input_vec)
             #appending our model output prediction to our output vector
-            output_vec[index,:] = curr_output_vec
+            output_vec[index,:] = curr_output_vec.T
 
         #returning our matrix of model predictions
         return output_vec
@@ -111,6 +113,8 @@ class Network:
         """
         This method trains our model to the x/y training data.
         """
+        # init the index counter for our error log
+        error_log_index = -1
         for epoch in range(self.epoch_num):
             #shuddling training data
             np.random.shuffle(self.train_data)
@@ -119,6 +123,8 @@ class Network:
                 raise Exception('Batch_size must evenly divide training data!')
             else:
                 for sub_data in np.split(self.train_data, self.batch_size):
+                    #incrementing error_log
+                    error_log_index+=1
                     #spltting subdata into x input vector and associated y output  vector
                     x_train_subset,y_train_subset = sub_data[:,:self.train_split_index], sub_data[:,self.train_split_index:]
 
@@ -130,7 +136,10 @@ class Network:
                         print_error = self.mean_squared_error(prediction_matrix,y_train_subset)
                     elif self.cost_func == 'log-loss':
                         print_error = self.log_loss_error(prediction_matrix, y_train_subset)
-                    print(f'Current Model Error {print_error}')
+
+                    #print(f'Current Model Error {print_error}')
+                    #adding current model error to log
+                    self.error_log[error_log_index] = print_error
 
                     #updating params via graident descent + backpropogation
                     self.backprop(x_train_subset,prediction_matrix,y_train_subset)
@@ -152,7 +161,7 @@ class Network:
                 output_layer_error = curr_layer.calculate_output_layer_error(error_prime_vec)
                 #updating weights/biases:
                 curr_layer.update_biases(self.learn_rate,output_layer_error)
-                curr_layer.update_weights(self.learn_rate,output_layer_error,self.network[index-1].output_vector)
+                curr_layer.update_weights_output_layer(self.learn_rate,output_layer_error,self.network[index-1].output_vector)
             if curr_layer.layer_type == 'hidden':
                 next_layer_weights = self.network[index+1].old_weights
                 next_layer_error =  self.network[index+1].error_vec
@@ -161,7 +170,7 @@ class Network:
                 curr_layer.update_biases(self.learn_rate,hidden_layer_error)
                 #pulling nessacary input vector and then updating weights
                 prev_layer_output =  self.network[index-1].output_vector
-                curr_layer.update_weights(self.learn_rate,hidden_layer_error,prev_layer_output)
+                curr_layer.update_weights_hidden_layer(self.learn_rate,hidden_layer_error,prev_layer_output)
             if curr_layer.layer_type == 'initial_hidden':
                 next_layer_weights = self.network[index + 1].old_weights
                 next_layer_error = self.network[index + 1].error_vec
@@ -170,7 +179,7 @@ class Network:
                 curr_layer.update_biases(self.learn_rate, hidden_layer_error)
                 # pulling nessacary input vector and then updating weights
                 prev_layer_output = x_inputs_vector
-                curr_layer.update_weights(self.learn_rate, hidden_layer_error, prev_layer_output)
+                curr_layer.update_weights_hidden_layer(self.learn_rate, hidden_layer_error, prev_layer_output)
 
         #resetting each layer's old_weights & errors IV to Nones
         for layer in self.network:
@@ -189,6 +198,13 @@ class Network:
         This function returns the derivative of mse w.r.t the y_predictions_vector. Used in backprop
         We stack our average errors w.r.t the number of neurons in our output layer
         """
+        #note: may have to altert the # of colums returned from this func if we have 2+ nodes in output layer
+        #code may possibly become:
+
+        """
+        return np.array([ [-2/self.batch_size*np.sum((y_observation_vector-y_predictions_vector)**2)]*self.y_test.shape[1]
+                          for _ in range(output_layer_depth) ])
+        """
         return np.array([ [-2/self.batch_size*np.sum((y_observation_vector-y_predictions_vector)**2)]
                           for _ in range(output_layer_depth) ])
 
@@ -206,28 +222,44 @@ class Network:
         return np.array([ [1/self.batch_size*np.sum(-(y_observation_vector/y_predictions_vector)+(1-y_observation_vector)/(1-y_predictions_vector))]
                           for _ in range(output_layer_depth) ])
 
-    def test(self):
-        """
-        This method tests our model against the test data & provides and accuracy heuristic
-        """
-        if self.cost_func =='mse': #this is a regression model, use RMSE
-            model_predictions = self.forward_propogate(self.x_test.T)
-            #calculating & displayinf RMSE
-            RMSE = (self.mean_squared_error(model_predictions,self.y_test))**0.5
-            print(f'Regression Model has an RMSE accuracy of: {RMSE}')
 
-        elif self.cost_func =='log-loss': #this is a binary classifier model, use 0.5 prediction cutoff
-            model_predictions = self.forward_propogate(self.x_test.T)
-            right_predicts = 0
-            for prediction , observation in zip(model_predictions,self.y_test):
-                if observation==1 and 0.5<=prediction<=1:
-                    right_predicts+=1
-                elif observation==0 and 0<=prediction<0.5:
-                    right_predicts+=1
-                else:
-                    pass
-            model_accuracy = right_predicts/model_predictions.shape[0] * 100
-            printf(f'The Binary Classification Model has an accuracy of {model_accuracy}%')
+    def plot_train_error(self):
+        """
+        this method plots our error while training
+        """
+        plt.plot(np.arange(1,len(self.error_log)+1),self.error_log)
+        plt.title('Model Error While')
+        plt.xlabel('Training Batch')
+        plt.ylabel('Model Error')
+        plt.show()
+        #printing error log to terminal
+        print(self.error_log)
+
+
+    def test_regression(self):
+        """
+        this method tests the regression capabilities of our model
+        """
+        model_predictions = self.forward_propogate(self.x_test.T)
+        # calculating & displayinf RMSE
+        RMSE = (self.mean_squared_error(model_predictions, self.y_test)) ** 0.5
+        print(f'Regression Model has an RMSE accuracy of: {RMSE}')
+
+    def test_classification(self):
+        """
+        this method tests the classification capabilities of our model
+        """
+        model_predictions = self.forward_propogate(self.x_test.T)
+        right_predicts = 0
+        for prediction , observation in zip(model_predictions,self.y_test):
+            if observation==1 and 0.5<=prediction<=1:
+                right_predicts+=1
+            elif observation==0 and 0<=prediction<0.5:
+                right_predicts+=1
+            else:
+                pass
+        model_accuracy = right_predicts/model_predictions.shape[0] * 100
+        print(f'The Binary Classification Model has an accuracy of {model_accuracy}%')
 
     def __repr__(self):
         return f'Network trained with {self.cost_func} Cost Function. Layers: \n' \
@@ -237,16 +269,20 @@ class Network:
 if __name__ == '__main__':
     #testing the forward propogation of a network which solves the XOR problem
     x_train = np.array([[0,0],[1,0],[0,1],[1,1]])
+    x_train2 = x_train
     y_train = np.array([[0],[1],[1],[0]])
+    y_train_2 = np.array([[0], [1], [1], [1]])
     x_test = np.array([[0,0],[0,0],[0,1],[0,1],[1,0],[1,0],[1,1]])
     y_test = np.array([[0],[0],[1],[1],[1],[1],[0]])
-    model = Network('mse',x_train,y_train,x_test,y_test,epoch_num=100,batch_size=2,layer_num=3,layer_depths=[3,5,2],learn_rate=0.001)
+    y_test_2 =  np.array([[1],[0,0],[1,1],[1,1],[1,1],[1,1],[0,0]])
+    model = Network('mse',x_train2,y_train_2,x_train2,y_train_2,epoch_num=500,batch_size=2,layer_num=2,layer_depths=[2,1],learn_rate=0.001)
     #adding hidden layers
     model.add_Layer('sigmoid','initial_hidden')
-    model.add_Layer('sigmoid', 'hidden')
+    #model.add_Layer('sigmoid', 'hidden')
     model.add_Layer('sigmoid', 'output')  #addding output layer
     print(model)
     #training model functionality
     model.train()
+    model.plot_train_error()
     #testing model
-    model.test()
+    model.test_classification()
