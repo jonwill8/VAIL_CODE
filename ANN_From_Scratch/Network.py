@@ -163,7 +163,7 @@ class Network:
                 curr_layer.update_biases(self.learn_rate,output_layer_error)
                 curr_layer.update_weights_output_layer(self.learn_rate,output_layer_error,self.network[index-1].output_vector)
             if curr_layer.layer_type == 'hidden':
-                next_layer_weights = self.network[index+1].old_weights
+                next_layer_weights = self.network[index + 1].old_weights
                 next_layer_error =  self.network[index+1].error_vec
                 hidden_layer_error = curr_layer.calculate_hidden_layer_error(next_layer_weights,next_layer_error)
                 #updating our bias
@@ -182,9 +182,11 @@ class Network:
                 curr_layer.update_weights_hidden_layer(self.learn_rate, hidden_layer_error, prev_layer_output)
 
         #resetting each layer's old_weights & errors IV to Nones
+        """ 
         for layer in self.network:
             layer.old_weights = None
             layer.error_vec = None
+        """
 
     def mean_squared_error(self,y_predictions_vector,y_observation_vector):
         """
@@ -201,11 +203,11 @@ class Network:
         #note: may have to altert the # of colums returned from this func if we have 2+ nodes in output layer
         #code may possibly become:
 
-        """
+        #debug test
+        """return np.array([ [-2/self.batch_size*np.sum((y_observation_vector-y_predictions_vector)**2)]*self.y_test.shape[1]
+                          for _ in range(output_layer_depth) ])"""
+
         return np.array([ [-2/self.batch_size*np.sum((y_observation_vector-y_predictions_vector)**2)]*self.y_test.shape[1]
-                          for _ in range(output_layer_depth) ])
-        """
-        return np.array([ [-2/self.batch_size*np.sum((y_observation_vector-y_predictions_vector)**2)]
                           for _ in range(output_layer_depth) ])
 
     def log_loss_error(self,y_predictions_vector,y_observation_vector):
@@ -275,7 +277,7 @@ if __name__ == '__main__':
     x_test = np.array([[0,0],[0,0],[0,1],[0,1],[1,0],[1,0],[1,1]])
     y_test = np.array([[0],[0],[1],[1],[1],[1],[0]])
     y_test_2 =  np.array([[1],[0,0],[1,1],[1,1],[1,1],[1,1],[0,0]])
-    model = Network('mse',x_train2,y_train_2,x_train2,y_train_2,epoch_num=500,batch_size=2,layer_num=2,layer_depths=[2,1],learn_rate=0.001)
+    model = Network('mse',x_train,y_train,x_test,y_test,epoch_num=1000,batch_size=2,layer_num=2,layer_depths=[2,1],learn_rate=0.005)
     #adding hidden layers
     model.add_Layer('sigmoid','initial_hidden')
     #model.add_Layer('sigmoid', 'hidden')
