@@ -15,7 +15,8 @@ import matplotlib.pyplot as plt
 
 class Network:
 
-    def __init__(self, cost_func, x_train, y_train, x_test, y_test, x_feautures, epoch_num, batch_size, layer_num, layer_depths,
+    def __init__(self, cost_func, x_train, y_train, x_test, y_test, x_features, epoch_num, batch_size, layer_num,
+                 layer_depths,
                  learn_rate):
         # init appropriate IVs
         if cost_func.lower() not in ('mse', 'log-loss'):
@@ -36,8 +37,8 @@ class Network:
         self.x_test = x_test
         self.y_test = y_test
 
-        #init the numner of x features we have each sample
-        self.x_feautures = x_feautures
+        # init the number of x features we have each sample
+        self.x_features = x_features
 
         # creating our np array of layer objects
         self.network = np.empty(layer_num, dtype=object)
@@ -63,7 +64,7 @@ class Network:
 
         if add_index == 0:  # this is the initial_hidden layer
             # fan_in is simply the number of x input variables w have for input layer
-            fan_in = self.x_feautures #should math the n x variales we have tied to each y output
+            fan_in = self.x_features  # should match the # of x variables that are tied to each y output
         else:  # this is a hidden/output layer
             fan_in = self.layer_depths[add_index - 1]
 
@@ -79,17 +80,7 @@ class Network:
 
     def forward_propagation(self, x_train_subset):
         """
-        This method feeds x input vector through model for n times
-        & appends our model prediction to an np array (self.predictions)
-        NOTE:
-        input matrix:
-        [[input vec 1]
-         [input vec 2]
-         [input vec 3]
-         ...
-         [input vec n]
-                      ]
-        the actual input matrix is a sub-slice of our entire training data
+        This method feeds x input vectors through the model & appends our predictions to an np array (self.predictions)
         """
 
         # defining function to return model outputs for a provided x input col array
@@ -117,7 +108,7 @@ class Network:
             curr_output_vec = push_output(curr_input_vec)
 
             # appending our model output prediction to our output vector
-            output_vec[index, :] = curr_output_vec.T #check why this is transposed b4 being added again
+            output_vec[index, :] = curr_output_vec.T  # check why this is transposed b4 being added again
 
         # returning our matrix of model predictions
         return output_vec
@@ -156,19 +147,20 @@ class Network:
                     # updating params via gradient descent + backpropagation
                     self.backpropagation(x_train_subset.T, prediction_matrix, y_train_subset)
 
-            # printing epoch number
-            print(f'Epoch # {epoch + 1}')
+            # printing every 100th epoch number
+            if (epoch + 1) % 100 == 0:
+                print(f'Epoch # {epoch + 1}')
 
     def backpropagation(self, x_inputs_vector, y_predictions_vector, y_observation_vector):
 
-        #init our overall error prime for the n observations in the x_inputs_vector
+        # init our overall error prime for the n observations in the x_inputs_vector
         error_prime_vec = self.mse_prime(y_predictions_vector, y_observation_vector,
                                          output_layer_depth=self.network[-1].neuron_number)
 
-        #MAKE SURE EACH x_input_vec is  column vector
+        # MAKE SURE EACH x_input_vec is  column vector
 
         for col_index in range(x_inputs_vector.shape[1]):
-            x_input_vec = np.atleast_2d(x_inputs_vector[:,col_index]).T
+            x_input_vec = np.atleast_2d(x_inputs_vector[:, col_index]).T
 
             # iterating backwards through the self.network Layer np array
             for index in range(len(self.network) - 1, -1, -1):
@@ -177,34 +169,51 @@ class Network:
                 curr_layer = self.network[index]
                 if curr_layer.layer_type == 'output':
 
-                    #pulling previous layer activation
+                    # pulling previous layer activation
                     prev_layer_activation = self.network[index - 1].output_vector
 
-                    #calculating weights partial (error is logged internally)
+                    # calculating weights partial (error is logged internally)
                     weight_partial = curr_layer.calculate_output_layer_partial(error_prime_vec, prev_layer_activation)
 
-                    #updating weights/biase
+                    # updating weights/bias
                     curr_layer.update_biases(self.learn_rate)
-                    curr_layer.update_weights(self.learn_rate,weight_partial)
+                    curr_layer.update_weights(self.learn_rate, weight_partial)
 
                 else:
 
-                    #pulling next layer weights/error vector
+                    # pulling next layer weights/error vector
                     next_layer_weights = self.network[index + 1].old_weights
                     next_layer_error_vec = self.network[index + 1].error_vec
 
-                    #pulling previous layer's activation
+                    # pulling previous layer's activation
                     if curr_layer.layer_type == 'hidden':
                         prev_layer_activation = self.network[index - 1].output_vector
-                    elif  curr_layer.layer_type == 'initial_hidden':
-                        #BACKPROP OVER EACH ENTRY IN X_INPUTS ARR
-                        prev_layer_activation = x_input_vec #MAKE SURE THIS IS nX1
+                    elif curr_layer.layer_type == 'initial_hidden':
+                        # backpropagate OVER EACH ENTRY IN X_INPUTS ARR
+                        prev_layer_activation = x_input_vec  # MAKE SURE THIS IS nX1
 
-                    weight_partial = curr_layer.calculate_hidden_layer_partial(next_layer_weights,next_layer_error_vec,prev_layer_activation)
+                    weight_partial = curr_layer.calculate_hidden_layer_partial(next_layer_weights, next_layer_error_vec,
+                                                                               prev_layer_activation)
 
-                    # updating weights/biase
+                    # updating weights/bias
                     curr_layer.update_biases(self.learn_rate)
                     curr_layer.update_weights(self.learn_rate, weight_partial)
+
+    def predict(self, x_input_vec):
+        """
+        this method yields a single model prediction for the provided x_input_vec
+        """
+
+        # fixing the x_input_vec to ensure its 2d and a column vec
+        x_input_vec = np.atleast_2d(x_input_vec)
+        if x_input_vec.shape[1] != 1:  # x_input_vec is a row vector
+            x_input_vec = x_input_vec.T
+        # iterating model outputs on the initial x_input_vec
+        output = x_input_vec
+        for layer in self.network:
+            output = layer.gen_output_vector(output)
+        # printing the output
+        print(output)
 
     def mean_squared_error(self, y_predictions_vector, y_observation_vector):
         """
@@ -247,12 +256,14 @@ class Network:
         this method plots our error while training
         """
         plt.plot(np.arange(1, len(self.error_log) + 1), self.error_log)
-        plt.title('Model Error While')
-        plt.xlabel('Training Batch')
+        plt.title('Model Error While Training')
+        plt.xlabel('Epoch #')
         plt.ylabel('Model Error')
         plt.show()
-        # printing error log to terminal
-        print(self.error_log)
+        # printing every 50th error from error log to terminal
+        for index, error_val in enumerate(self.error_log):
+            if (index + 1) % 50 == 0:
+                print(error_val)
 
     def test_regression(self):
         """
@@ -261,9 +272,9 @@ class Network:
         model_predictions = self.forward_propagation(self.x_test.T)
         # calculating & displaying MSE/RMSE
         mse = self.mean_squared_error(model_predictions, self.y_test)
-        rmse = (self.mean_squared_error(model_predictions, self.y_test)) ** 0.5
-        print(f'Regression Model has an MSE accuracy of: {mse}')
-        print(f'Regression Model has an RMSE accuracy of: {rmse}')
+        rmse = mse ** 0.5
+        print(f'Regression Model has an MSE accuracy of: {round(mse,4)}')
+        print(f'Regression Model has an RMSE accuracy of: {round(rmse,4)}')
 
     def test_classification(self):
         """
@@ -279,46 +290,8 @@ class Network:
             else:
                 pass
         model_accuracy = right_predicts / model_predictions.shape[0] * 100
-        print(f'The Binary Classification Model has an accuracy of {model_accuracy}%')
+        print(f'The Binary Classification Model has an accuracy of {round(model_accuracy,4)}%')
 
     def __repr__(self):
         return f'Network trained with {self.cost_func} Cost Function. Layers: \n' \
                f'{self.network}'
-
-
-if __name__ == '__main__':
-    # testing the forward propagation of a network which solves the Binary And problem
-
-    # setting up test/train data arrays #CLEAN UP AND CHECK FOR ACCURACY
-    X_train = np.array([[0, 0], [1, 0], [0, 1], [1, 1]])
-    Y_train = np.array([[0], [1], [1], [0]])
-    Y_train_2 = np.array([[0], [0], [0], [1]])
-    X_test = np.array([[0, 0], [0, 0], [0, 1], [0, 1], [1, 0], [1,1], [1, 0], [1, 1]])
-    Y_test = np.array([[0], [0], [1], [1], [0], [1], [1], [0]])
-    Y_test_2 = np.array([[0], [0], [0], [1], [1], [1], [0],[1]])
-
-    # creating model object
-    model = Network('mse', X_train, Y_train, X_train, Y_train, x_feautures=2,epoch_num=500, batch_size=1,
-                    layer_num=2, layer_depths=[2, 1], learn_rate=0.03)
-
-    # adding hidden layer
-    model.add_Layer('relu', 'initial_hidden')
-
-    # adding output layer
-    model.add_Layer('sigmoid', 'output')
-
-    # printing the model
-    print(model)
-
-    # training model
-    model.train()
-
-
-    # plotting model error while training
-    model.plot_train_error()
-
-    print('Optimized Model: ')
-    print(model)
-
-    # testing model
-    model.test_classification()

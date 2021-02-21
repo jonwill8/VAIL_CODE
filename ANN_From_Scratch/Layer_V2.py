@@ -32,7 +32,7 @@ class Layer2:
             scaler = math.sqrt(1 / self.fan_in)
         elif self.neuron_activation_func == 'relu':
             scaler = math.sqrt(2 / self.fan_in)
-        self.neuron_weights = np.array([ [np.random.normal(scale=scaler)]*fan_in for _ in range(self.neuron_number)])
+        self.neuron_weights = np.array([[np.random.normal(scale=scaler) for _ in range(fan_in)] for _ in range(self.neuron_number)])
         #init our column vector of neuron biases
         self.neuron_biases = np.array([[1] for _ in range(self.neuron_number)])
 
