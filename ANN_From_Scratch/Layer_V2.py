@@ -3,10 +3,9 @@ This Script contains the 2nd iteration of our Layer Class
 """
 
 #making nessacary imports
-from Neuron import Neuron
+import math
 import numpy as np
 import Neuron_Math as nm
-import math
 
 class Layer2:
     def __init__(self,neuron_number,neuron_activation_func,layer_type,fan_in,fan_out):
@@ -60,55 +59,32 @@ class Layer2:
         #returning the output vector
         return self.output_vector
 
-    def update_weights_output_layer(self,learn_rate,error_vec,last_layer_output):
+    def update_weights(self,learn_rate,partial_weights_vec):
         """
-        This method updates our output layer neuron weights provided a learning rate & our returned self.error vector
+        This method updates our laayer neuron weights provided a learning rate & partial cost w.r.t weights vector
         """
-        #checking if we should transpose last layer output vector
-        partial_cost_wrt_weights = last_layer_output.T*error_vec
-        #checking dimensions of our partial_cost_wrt_weights matrix
-        if partial_cost_wrt_weights.shape[1]!= self.neuron_weights.shape[1]:
-            raise Exception (f'The Col # of the Partial Error Weight Update matrix does not match the column '
-                             f'# of this output layer\'s neuron weight matrix. You must have equivlanet dimensions '
-                             f'to perform backprop!')
+        if partial_weights_vec.shape != self.neuron_weights.shape:
+            raise Exception('Partial Weight Matrix must match the dimensions of the layer\'s Weight Matrix')
         else:
             self.log_old_weights()  # logging the old weight values to use in backprop
-            self.neuron_weights = self.neuron_weights - learn_rate*partial_cost_wrt_weights
-
-    def update_weights_hidden_layer(self,learn_rate,error_vec,last_layer_output):
-        """
-        This method updates our neuron hidden weights provided a learning rate & our returned self.error vector
-        Note: check if this method has bad dimensionlaity for matrix operations!
-        """
-        #perhaps np.sum(layer+1 weights transposed)
-        #reting if we should transpose last layer output vector
-        partial_cost_wrt_weights = last_layer_output*error_vec
-        #checking dimensions of our partial_cost_wrt_weights matrix
-        if partial_cost_wrt_weights.shape != self.neuron_weights.shape:
-            raise Exception (f'The Partial Error Weight Update matrix of dimensons {partial_cost_wrt_weights.shape} '
-                             f'does not match the dimensons of this layer\'s neuron weight matrix: {self.neuron_weights.shape}')
-        else:
-            self.log_old_weights()  # logging the old weight values to use in backprop
-            self.neuron_weights = self.neuron_weights - learn_rate * partial_cost_wrt_weights
+            self.neuron_weights = self.neuron_weights - learn_rate * partial_weights_vec
 
 
-
-    def update_biases(self,learn_rate,error_vec):
+    def update_biases(self,learn_rate):
         """
         This method updates our biases vector during backpropogation.
-        error_vec = the result of calling calculate hidden/output error on THIS layer
-        Must call calculate_error method first then update biases!
+        Must call calculate_layer+partial method first then update biases!
         """
-        if error_vec.shape != self.neuron_biases.shape:
-            raise Exception (f'The Layer Error Bias Update Vector of dimensons {error_vec.shape.shape} '
+        if self.error_vec.shape != self.neuron_biases.shape:
+            raise Exception (f'The Layer\'s Error Vector of dimensons {self.error_vec.shape.shape} '
                              f'does not match the dimensons of this layer\'s neuron bias matrix: {self.neuron_biases.shape}')
         else:
-            self.neuron_biases = self.neuron_biases - learn_rate*error_vec
+            self.neuron_biases = self.neuron_biases - learn_rate*self.error_vec
 
 
-    def calculate_output_layer_error(self,error_prime_vec):
+    def calculate_output_layer_partial(self,error_prime_vec,prev_layer_activation):
         """
-        this method calculates and sets as an IV the output layer's error vector
+        this method calculates the output layer's weight partial and sets as an IV the output layer's error vector
         """
         #ensuring uniform dimensons for hagmard product
 
@@ -126,12 +102,13 @@ class Layer2:
                 Z_prime = nm.rectified_linear_prime(self.Z)
 
             self.error_vec = error_prime_vec*Z_prime
-            return self.error_vec
+            partial_wrt_weights_vec = np.dot(self.error_vec,prev_layer_activation.T)
+            return partial_wrt_weights_vec
 
-    def calculate_hidden_layer_error(self,next_layer_weights,next_layer_error_vec):
+
+    def calculate_hidden_layer_partial(self,next_layer_weights,next_layer_error_vec,prev_layer_activation):
         """
-        this method calculates and sets as an IV a hidden layer's error vector
-        next_layer_weights is transposed after it is passed
+        this method calculates the hidden layer's weight partial and sets as an IV the hidden layer's error vector
         """
         # calculating the proper z prime vector
         Z_prime = None
@@ -142,8 +119,9 @@ class Layer2:
         elif self.neuron_activation_func == 'relu':
             Z_prime = nm.rectified_linear_prime(self.Z)
 
-        self.error_vec = (next_layer_weights.T*next_layer_error_vec)*Z_prime
-        return self.error_vec
+        self.error_vec = np.dot(next_layer_weights.T,next_layer_error_vec) * Z_prime
+        partial_wrt_weights_vec = np.dot(self.error_vec, prev_layer_activation.T)
+        return partial_wrt_weights_vec
 
 
     def log_old_weights(self):
@@ -151,7 +129,6 @@ class Layer2:
         #this helper method logs our layer's neuron weight values before updating during backprop
         
         self.old_weights = self.neuron_weights
-
 
 
     def __repr__(self):
