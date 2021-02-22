@@ -157,12 +157,12 @@ class Network:
                 # updating params via gradient descent + backpropagation
                 self.backpropagation(x_train_subset.T, prediction_matrix, y_train_subset)
 
-        # printing every nth epoch number
-        if (epoch + 1) % self.print_error_iteration == 0:
-            print(f'Epoch # {epoch + 1}')
+            # printing every nth epoch number
+            if (epoch + 1) % self.print_error_iteration == 0:
+                print(f'Epoch #: {epoch + 1} | Most Recent Error" {self.print_error}')
 
     def backpropagation(self, x_inputs_vector, y_predictions_vector, y_observation_vector):
-
+        #note we currently are using pure stochastic gradient descent.
         # init our overall error prime for the n observations in the x_inputs_vector
 
         if self.cost_func == 'mse':
@@ -234,7 +234,7 @@ class Network:
                 output = layer.gen_output_vector(output)
             return output
         #creating output vector
-        outputs_vec = np.zeros((x_input_vec.shape[0],1))
+        outputs_vec = np.zeros((x_input_vec.shape[0],self.y_test.shape[1]))
         #iterating over all x input rows in the x_input_vec
         for row_index in range(x_input_vec.shape[0]):
             curr_x_input_vec = np.atleast_2d(x_input_vec[row_index,:])
@@ -242,50 +242,46 @@ class Network:
             curr_x_input_vec = curr_x_input_vec.T
             #feeding our x input vector into the model
             curr_output = push_output(curr_x_input_vec)
-            outputs_vec[row_index,:] = curr_output
+            outputs_vec[row_index,:] = curr_output.T
         #printing our output vector
-        print(outputs_vec)
+        return outputs_vec
+
 
     def mean_squared_error(self, y_predictions_vector, y_observation_vector):
         """
         This function returns the means squared error associated with our prediction vector
         Used for printing how our model is fitting to the data each epoc (regression)
         """
-        return 1 / self.batch_size * np.sum((y_observation_vector - y_predictions_vector) ** 2)
+        return  np.mean(np.sum((y_observation_vector - y_predictions_vector) ** 2))
 
     def mse_prime(self, y_predictions_vector, y_observation_vector, output_layer_depth):
         """
-        This function returns the derivative of mse w.r.t the y_predictions_vector. Used in backpropagation
+        This function returns the signle sample derivative of mse w.r.t the y_predictions_vector. Used in backpropagation
         We stack our average errors w.r.t the number of neurons in our output layer
         """
-        # note: may have to alter the # of columns returned from this func if we have 2+ nodes in output layer
-        """
-        THIS CODE WORKED FOR XOR CLASSIFICATION!
-        return np.array(
-            [[-2 / self.batch_size * np.sum((y_observation_vector - y_predictions_vector))] * self.y_test.shape[1]
-             for _ in range(output_layer_depth)])
-        """
-        return np.array(
-            [[-2 / self.batch_size * np.sum((y_observation_vector - y_predictions_vector))]
-             for _ in range(output_layer_depth)])
+        #what's commented out works for xor
+        #return np.array([[-2/self.y_test.shape[1] * np.sum((y_observation_vector - y_predictions_vector))]
+                         #for _ in range(output_layer_depth)])
+
+        #make sure this returns a 2d n X 1 column vector of errors
+        return -2 / self.y_test.shape[1] * (y_observation_vector - y_predictions_vector)[0].T
+
 
     def log_loss_error(self, y_predictions_vector, y_observation_vector):
         """
         This function returns the log loss error associated with our prediction vector
         Used for printing how our model is fitting to the data each epoc (classification)
         """
-        return -1 / self.batch_size * np.sum(
-            y_observation_vector * np.log(y_predictions_vector) + (1 - y_observation_vector) * np.log(
-                1 - y_predictions_vector))
+        #return -1/self.y_test.shape[1]*np.sum(y_observation_vector*np.log(y_predictions_vector) + (1 - y_observation_vector) * np.log(1 - y_predictions_vector))
+        return -1*np.mean(y_observation_vector*np.log(y_predictions_vector) + (1 - y_observation_vector) * np.log(1 - y_predictions_vector))
 
     def log_loss_prime(self, y_predictions_vector, y_observation_vector, output_layer_depth):
         """
         This function returns the derivative of log loss w.r.t the y_predictions_vector. Used in backpropagation
         """
-        return np.array([[1 / self.batch_size * np.sum(
-            -(y_observation_vector / y_predictions_vector) + (1 - y_observation_vector) / (1 - y_predictions_vector))] *
-                         self.y_test.shape[1]
-                         for _ in range(output_layer_depth)])
+        #return np.array([[1 / self.y_test.shape[1] * np.sum( -(y_observation_vector / y_predictions_vector) + (1 - y_observation_vector) / (1 - y_predictions_vector))]
+                         #for _ in range(output_layer_depth)])
+        return 1 / self.y_test.shape[1] * (-(y_observation_vector / y_predictions_vector) + (1 - y_observation_vector) / (1 - y_predictions_vector))[0].T
 
     def plot_train_error(self,print_error=False):
         """
@@ -313,7 +309,7 @@ class Network:
         print(f'Regression Model has an MSE accuracy of: {round(mse, 4)}')
         print(f'Regression Model has an RMSE accuracy of: {round(rmse, 4)}')
 
-    def test_classification(self):
+    def test_binary_classification(self):
         """
         this method tests the classification capabilities of our model
         """
@@ -328,6 +324,23 @@ class Network:
                 pass
         model_accuracy = right_predicts / model_predictions.shape[0] * 100
         print(f'The Binary Classification Model has an accuracy of {round(model_accuracy, 4)}%')
+
+    def test_multinomial_classification(self):
+        """
+        This method tests the multinomial classification capabilities of our model
+        """
+        model_predictions = self.predict(self.x_test)
+        right_predicts = 0
+
+        for row_index in range(self.y_test.shape[0]):
+            curr_y_vec = self.y_test[row_index,:]
+            curr_model_predict = model_predictions[row_index,:]
+            if np.argmax(curr_model_predict) == np.argmax(curr_y_vec):
+                right_predicts+=1
+
+        model_accuracy = right_predicts / model_predictions.shape[0] * 100
+        print(f'The Multinomial Classification Model has an accuracy of {round(model_accuracy, 4)}%')
+
 
     def __repr__(self):
         return f'Network trained with {self.cost_func} Cost Function. Layers: \n' \
@@ -355,12 +368,12 @@ if __name__ == '__main__':
     y_test = np_utils.to_categorical(y_test)
 
     #taking 2000 subsamples:
-    x_train_trunc = x_train[0:2000]
-    y_train_trunc = y_train[0:2000]
+    x_train_trunc = x_train[0:4000]
+    y_train_trunc = y_train[0:4000]
     
     #testing on 50 samples
-    x_test_trunc = x_test[0:50]
-    y_test_trunc = y_test[0:50]
+    x_test_trunc = x_test[0:400]
+    y_test_trunc = y_test[0:400]
 
     #reshaping data to conform to our model 2d np arrray standards
     x_train_trunc = np.reshape(x_train_trunc, (x_train_trunc.shape[0], x_train_trunc.shape[2]))
@@ -370,7 +383,7 @@ if __name__ == '__main__':
 
 
     # creating our model
-    model = Network('mse', x_train_trunc, y_train_trunc, x_test_trunc, y_test_trunc, x_features=784, epoch_num=35,
+    model = Network('mse', x_train_trunc, y_train_trunc, x_test_trunc, y_test_trunc, x_features=784, epoch_num=50,
                     layer_num=3, layer_depths=[100, 50, 10], learn_rate=0.1,print_error_iteration=1)
 
     #adding our tangent hyperbolic hidden layers
@@ -385,6 +398,9 @@ if __name__ == '__main__':
 
     #plotting model error while training
     model.plot_train_error(print_error=False)
+
+    #printing model predictions for some test samples
+    model.test_multinomial_classification()
 
 
 
