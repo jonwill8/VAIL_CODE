@@ -1,5 +1,5 @@
 """
-This Script contains the 2nd iteration of our Layer Class
+This Script contains our Layer Class
 """
 
 # making necessary imports
