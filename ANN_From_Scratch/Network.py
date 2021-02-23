@@ -114,7 +114,8 @@ class Network:
                 self.error_log[error_log_index] = self.print_error
 
                 # updating params via gradient descent + backpropagation
-                self.backpropagation(x_train_subset.T, prediction_matrix, y_train_subset)
+                self.backpropagation(x_train_subset, prediction_matrix, y_train_subset)
+
 
             # printing error after each epoch nth epoch number
             print(f'Epoch #: {epoch + 1} | Most Recent Error" {self.print_error}')
@@ -165,9 +166,10 @@ class Network:
         elif self.cost_func == 'log-loss':
             error_prime_vec = self.log_loss_prime(y_predictions_vector, y_observation_vector)
 
-        for col_index in range(x_inputs_vector.shape[1]):
+        #for col_index in range(x_inputs_vector.shape[1]):
+        for row_index in range(x_inputs_vector.shape[0]):
 
-            x_input_vec = np.atleast_2d(x_inputs_vector[:, col_index]).T  # making sure each x vec stays a column vec
+            x_input_vec =  np.atleast_2d(x_inputs_vector[row_index, :]).T  # making sure each x vec is a column vec
 
             # iterating backwards through the self.network Layer np array
             for index in range(len(self.network) - 1, -1, -1):
