@@ -1,9 +1,8 @@
 """
 This script contains the Macro Network Class for our fully connected ANN
-This ANN will perform both Binary classification (log loss GD optimization) and regression (MSE loss GD optimization)
+This ANN performs both Binary classification, Multinomial Classification, and regression
 
 DATA ENTRY NOTE:
-
 all x/y train & test data must be passed as 2D Np arrays
 each row corresponds to the x input vector of a single y train/test samples
 data must always be of form a x b where a is the number of samples and b is the number of features
@@ -11,14 +10,15 @@ data must always be of form a x b where a is the number of samples and b is the 
 
 # TODO Implement Parameter Regularization Techniques (ex: Neuron Dropout)
 # TODO Implement Mini Batch GD
+# we currently backpropagate after calculating single sample error gradient for each x input vector
+# with mini-batch we will average out the error gradient & then backpropagate over each x input vector
+# TODO Implement Softmax for Multinomial Classification
 
 
 # making necessary imports
-from Layer_V2 import Layer2
 import numpy as np
 import matplotlib.pyplot as plt
-from keras.datasets import mnist
-from keras.utils import np_utils
+from Layer import Layer
 
 
 class Network:
@@ -62,7 +62,7 @@ class Network:
     def add_Layer(self, neuron_activation_func, layer_type):
         """
         Adds a Layer object to our self.network np array
-        Note: ensure that when adding layers the order is hidden_layer --> hidden_1 --> hidden_2 --> hidden_n --> output
+        Note: when adding layers the order must be: initial_hidden --> hidden_1 --> hidden_2 --> hidden_n --> output
         """
         # init the index to which we will drop our created Layer Object
         add_index = np.count_nonzero(self.network)
@@ -82,7 +82,7 @@ class Network:
             fan_out = self.layer_depths[add_index + 1]
 
         # creating layer object & adding to self.network
-        layer = Layer2(neuron_number, neuron_activation_func, layer_type, fan_in, fan_out)
+        layer = Layer(neuron_number, neuron_activation_func, layer_type, fan_in, fan_out)
         self.network[add_index] = layer
 
     def train(self):
@@ -161,13 +161,13 @@ class Network:
 
         # init our overall error prime for the n observations in the x_inputs_vector
         if self.cost_func == 'mse':
-            error_prime_vec = self.mse_prime(y_predictions_vector, y_observation_vector,)
+            error_prime_vec = self.mse_prime(y_predictions_vector, y_observation_vector, )
         elif self.cost_func == 'log-loss':
             error_prime_vec = self.log_loss_prime(y_predictions_vector, y_observation_vector)
 
         for col_index in range(x_inputs_vector.shape[1]):
 
-            x_input_vec = np.atleast_2d(x_inputs_vector[:, col_index]).T  # making sure each x input vec is a column vec
+            x_input_vec = np.atleast_2d(x_inputs_vector[:, col_index]).T  # making sure each x vec stays a column vec
 
             # iterating backwards through the self.network Layer np array
             for index in range(len(self.network) - 1, -1, -1):
@@ -196,9 +196,9 @@ class Network:
                     if curr_layer.layer_type == 'hidden':
                         prev_layer_activation = self.network[index - 1].output_vector
                     elif curr_layer.layer_type == 'initial_hidden':
-                        # backpropagate OVER EACH ENTRY IN X_INPUTS ARR
-                        prev_layer_activation = x_input_vec  # MAKE SURE THIS IS nX1
+                        prev_layer_activation = x_input_vec
 
+                    # calculating weights partial (error is logged internally)
                     weight_partial = curr_layer.calculate_hidden_layer_partial(next_layer_weights, next_layer_error_vec,
                                                                                prev_layer_activation)
 
@@ -208,14 +208,14 @@ class Network:
 
     def mean_squared_error(self, y_predictions_vector, y_observation_vector):
         """
-        This function returns the means squared error associated with our prediction vector
+        This function returns the mean squared error associated with our model's prediction
         Used for printing how our model is fitting to the data each epoc (regression)
         """
         return np.mean(np.sum((y_observation_vector - y_predictions_vector) ** 2))
 
     def mse_prime(self, y_predictions_vector, y_observation_vector):
         """
-        This function returns the single sample derivative of mse w.r.t the y_predictions_vector. Used in backpropagation
+        Returns the single sample derivative of mse w.r.t the y_predictions_vector. Used in backpropagation
         We stack our average errors w.r.t the number of neurons in our output layer
         """
 
@@ -236,8 +236,8 @@ class Network:
         """
 
         return 1 / self.y_test.shape[1] * (
-                    -(y_observation_vector / y_predictions_vector) + (1 - y_observation_vector) / (
-                        1 - y_predictions_vector))[0].T
+                -(y_observation_vector / y_predictions_vector) + (1 - y_observation_vector) / (
+                1 - y_predictions_vector))[0].T
 
     def plot_train_error(self):
         """
@@ -295,57 +295,3 @@ class Network:
     def __repr__(self):
         return f'Network trained with {self.cost_func} Cost Function. Layers: \n' \
                f'{self.network}'
-
-
-if __name__ == '__main__':
-    # load MNIST from server
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
-    # %%
-
-    # reshaping & normalizing x_train data
-    x_train = x_train.reshape(x_train.shape[0], 1, 28 * 28)
-    x_train = x_train.astype('float32')
-    x_train /= 255
-
-    # hot encoding y_train vector
-    y_train = np_utils.to_categorical(y_train)
-
-    # reshaping & normalizing y_train data
-    x_test = x_test.reshape(x_test.shape[0], 1, 28 * 28)
-    x_test = x_test.astype('float32')
-    x_test /= 255
-    y_test = np_utils.to_categorical(y_test)
-
-    # taking 4000 sub-samples:
-    x_train_trunc = x_train[0:4000]
-    y_train_trunc = y_train[0:4000]
-
-    # testing on 50 samples
-    x_test_trunc = x_test[0:400]
-    y_test_trunc = y_test[0:400]
-
-    # reshaping data to conform to our model 2d np array standards
-    x_train_trunc = np.reshape(x_train_trunc, (x_train_trunc.shape[0], x_train_trunc.shape[2]))
-    # y_train_trunc = np.reshape(y_train_trunc, (y_train_trunc.shape[0], y_train_trunc.shape[2]))
-    x_test_trunc = np.reshape(x_test_trunc, (x_test_trunc.shape[0], x_test_trunc.shape[2]))
-    # y_test_trunc =  np.reshape(y_test_trunc, (y_test_trunc.shape[0], y_test_trunc.shape[2]))
-
-    # creating our model
-    model = Network('mse', x_train_trunc, y_train_trunc, x_test_trunc, y_test_trunc, x_features=784, epoch_num=35,
-                    layer_num=3, layer_depths=[100, 50, 10], learn_rate=0.1)
-
-    # adding our tangent hyperbolic hidden layers
-    model.add_Layer('tanhyp', 'initial_hidden')
-    model.add_Layer('tanhyp', 'hidden')
-
-    # adding output layer
-    model.add_Layer('tanhyp', 'output')
-
-    # training model
-    model.train()
-
-    # plotting model error while training
-    model.plot_train_error()
-
-    # printing model predictions for some test samples
-    model.test_multinomial_classification()
