@@ -161,7 +161,7 @@ class Network:
 
         # init our overall error prime for the n observations in the x_inputs_vector
         if self.cost_func == 'mse':
-            error_prime_vec = self.mse_prime(y_predictions_vector, y_observation_vector, )
+            error_prime_vec = self.mse_prime(y_predictions_vector, y_observation_vector)
         elif self.cost_func == 'log-loss':
             error_prime_vec = self.log_loss_prime(y_predictions_vector, y_observation_vector)
 
