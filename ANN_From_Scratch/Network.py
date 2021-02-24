@@ -14,7 +14,7 @@ class Network:
 
     DATA ENTRY NOTE:
     all x/y train & test data must be passed as 2D np arrays!
-    Each row holds the x/y data for a single test/train tsample
+    Each row holds the complete x/y data for a single test or train sample
     """
 
     def __init__(self, cost_func, x_train, y_train, x_test, y_test, x_features, epoch_num, layer_num,
@@ -25,7 +25,7 @@ class Network:
         else:
             self.cost_func = cost_func.lower()
 
-        # check to ensure all data is in 2d vectors
+        # check to ensure all data is in 2d np arrays
         if x_train.ndim == 1 or y_train.ndim == 1 or x_test.ndim == 1 or y_test.ndim == 1:
             raise Exception('Passed Train & Test Data must be wrapped in a 2D numpy array!')
         if len(x_train.shape) != 2 or len(y_train.shape) != 2 or len(x_test.shape) != 2 or len(y_test.shape) != 2:
@@ -49,9 +49,9 @@ class Network:
         self.layer_num = layer_num
         self.layer_depths = layer_depths
 
-        #checking to see if batch_num can evenly divide our training data np array
-        if self.train_data.shape[0]%batch_num != 0:
-            raise Exception('You must choose a batch number which evenely divies the training data!')
+        # checking to see if batch_num can evenly divide our training data np array
+        if self.train_data.shape[0] % batch_num != 0:
+            raise Exception('You must choose a batch number which evenly divides the training data!')
         else:
             self.batch_num = batch_num
         self.learn_rate = learn_rate
@@ -93,15 +93,15 @@ class Network:
             # shuffling training data
             np.random.shuffle(self.train_data)
             # splitting training data by batch size
-            for train_data_subset in np.split(self.train_data,self.batch_num):
-                #incrementing the error log index
-                error_log_index+=1
-                #pulling the x & y data vectors from our train_batch_subset
+            for train_data_subset in np.split(self.train_data, self.batch_num):
+                # incrementing the error log index
+                error_log_index += 1
+                # pulling the x & y data vectors from our train_batch_subset
                 x_train_batch = train_data_subset[:, :self.train_split_index]
                 y_train_batch = train_data_subset[:, self.train_split_index:]
-                #pulling our model predictions on the x_data vectors from our train_batch_subset
+                # pulling our model predictions on the x_data vectors from our train_batch_subset
                 prediction_matrix = self.predict(x_train_batch)
-                #calculating batch error
+                # calculating batch error
                 if self.cost_func == 'mse':
                     batch_error = self.mean_squared_error(prediction_matrix, y_train_batch)
                 elif self.cost_func == 'log-loss':
@@ -154,9 +154,8 @@ class Network:
         return outputs_vec
 
     def backpropagation(self, x_inputs_vector, y_predictions_vector, y_observation_vector):
-        # note we currently are using pure stochastic gradient descent. Need to update code for mini-batch
+        # init our overall error prime vector
 
-        # init our overall error prime for the n observations in the x_inputs_vector
         if self.cost_func == 'mse':
             error_prime_vec = self.mse_prime(y_predictions_vector, y_observation_vector)
         elif self.cost_func == 'log-loss':
@@ -164,7 +163,8 @@ class Network:
 
         for row_index in range(x_inputs_vector.shape[0]):
 
-            x_input_vec = np.atleast_2d(x_inputs_vector[row_index, :]).T  # making sure each x vec is a column vec
+            # making sure each x vec is a column vec
+            x_input_vec = np.atleast_2d(x_inputs_vector[row_index, :]).T
 
             # iterating backwards through the self.network Layer np array
             for index in range(len(self.network) - 1, -1, -1):
@@ -216,8 +216,8 @@ class Network:
         Return 2d vector dimensions are n x 1 (column vector)
         """
 
-        error_gradients = (np.mean((-2*(y_observation_vector - y_predictions_vector)),axis=0)).T
-        return error_gradients.reshape(error_gradients.shape[0],-1)
+        error_gradients = (np.mean((-2*(y_observation_vector - y_predictions_vector)), axis=0)).T
+        return error_gradients.reshape(error_gradients.shape[0], -1)
 
     def log_loss_error(self, y_predictions_vector, y_observation_vector):
         """
@@ -231,19 +231,15 @@ class Network:
         """
         This function returns the derivative of log loss w.r.t the y_predictions_vector. Used in backpropagation
         """
-        #updating to show the true formula for SGD
-
-        ##updating log-loss cost function deriviative to show true SGD implementation
-        error_gradients = (np.mean(((-y_observation_vector / y_predictions_vector) + (1 - y_observation_vector) / (1 - y_predictions_vector)),axis=0)).T
-        return error_gradients.reshape(error_gradients.shape[0],-1)
-
+        error_gradients = (np.mean(((-y_observation_vector / y_predictions_vector) + (1 - y_observation_vector) / (1 - y_predictions_vector)), axis=0)).T
+        return error_gradients.reshape(error_gradients.shape[0], -1)
 
     def plot_train_error(self):
         """
         this method plots our model error over training batches
         """
         plt.plot(np.arange(1, len(self.error_log) + 1), self.error_log)
-        plt.title('Model Error Over Training Iterations')
+        plt.title('Model Error Over Training Batches')
         plt.xlabel('Batch #')
         plt.ylabel('Model Error')
         plt.show()
@@ -254,14 +250,14 @@ class Network:
         """
         model_predictions = self.predict(self.x_test)
         # calculating & displaying MSE/RMSE
-        mse = self.mean_squared_error(model_predictions, self.y_test)
+        mse = float(self.mean_squared_error(model_predictions, self.y_test))
         rmse = mse ** 0.5
         print(f'Regression Model has an MSE accuracy of: {round(mse, 4)}')
         print(f'Regression Model has an RMSE accuracy of: {round(rmse, 4)}')
 
     def test_binary_classification(self):
         """
-        this method tests the classification capabilities of our model
+        this method tests the binary classification accuracy of our model
         """
         model_predictions = self.predict(self.x_test)
         right_predicts = 0
@@ -277,7 +273,7 @@ class Network:
 
     def test_multinomial_classification(self):
         """
-        This method tests the multinomial classification capabilities of our model
+        This method tests the multinomial classification accuracy of our model
         """
         model_predictions = self.predict(self.x_test)
         right_predicts = 0
