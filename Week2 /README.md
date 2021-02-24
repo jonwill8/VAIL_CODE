@@ -33,6 +33,16 @@ ___
         * A CNN is tailored for image classification, while a general FC ANN can perform more general tasks such as regression
         * An FC ANN can only be feed vectorized (nx1) input data while a CNN can be feed (n,n) image data input
         * All CNN's contain a FC ANN as a compnent, but the inverse is not true.
+
+## Reflection - 2/23/21
+    The key advantage of using ReLu as opposed to Tanh/Sigmoid as the activation function for hidden layers is that
+    Relu is able to fight of the vanishing graident problem which plagues Tanh/Sigmoid. Outside of a small sweet spot
+    near a weighted input value of 0, the derivative of a neuron which utilizes Tanh/Sigmoid Activation Functions is 
+    close to 0. This means that during backpropogation, the weights inside that neuron will not change much. The vanishing 
+    gradient problem only amplifies the "deeper" a NN becomes because during backpropogation, weights are updating using 
+    a vector which is depdent on the error in the preceeding layer (if a single neuron close to the output layer has a 
+    vanishing gradient, than a near zero error signal will be passed back, and weights will not change dramatically and
+    it will take our model a longer time to converge).
         
     
 
