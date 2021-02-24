@@ -3,14 +3,13 @@ This script contains the Macro Network Class for our fully connected ANN
 This ANN performs both Binary classification, Multinomial Classification, and regression
 
 DATA ENTRY NOTE:
-all x/y train & test data must be passed as 2D Np arrays
+all x/y train & test data must be passed as 2D np arrays
 each row corresponds to the x input vector of a single y train/test samples
 data must always be of form a x b where a is the number of samples and b is the number of features
 """
 
 # TODO Implement Parameter Regularization Techniques (ex: Neuron Dropout)
 # TODO Implement Softmax for Multinomial Classification
-
 
 # making necessary imports
 import numpy as np
@@ -58,9 +57,7 @@ class Network:
         else:
             self.batch_num = batch_num
         self.learn_rate = learn_rate
-        # we log an error each batch during the SGD
-        self.error_log = np.zeros((self.epoch_num * self.train_data.shape[0]))
-        self.print_error = None
+        self.error_log = np.zeros((self.epoch_num * self.batch_num))
 
     def add_Layer(self, neuron_activation_func, layer_type):
         """
@@ -99,57 +96,40 @@ class Network:
             np.random.shuffle(self.train_data)
             # splitting training data by batch size
             for train_data_subset in np.split(self.train_data,self.batch_num):
-                #  creating our 2d np array of model predictions over the entire batch
-                prediction_matrix = np.zeros((train_data_subset.shape[0], self.y_test.shape[1]))
-                # creating a counter var of the insert row into our prediciton matrix
-                insert_row = -1
-                # splitting training data into single sample vectors
-                for sub_data in np.split(train_data_subset, train_data_subset.shape[0]): #pulling single data samples
-                    # incrementing error_log & insert row variables
-                    error_log_index += 1
-                    insert_row+=1
-
-                    # parsing sub-data into x input vector and associated y output  vector
-                    x_train_subset, y_train_subset = sub_data[:, :self.train_split_index], sub_data[:, self.train_split_index:]
-
-                    # pulling our model's prediction vector on the x_train_subset data
-                    prediction_vector = np.array([self.predict(x_train_subset)])
-
-                    # appending our model's prediction vector to the prediction_matrix
-                    prediction_matrix[insert_row,:] = prediction_vector
-
-                    # logging model error every single prediction
-                    if self.cost_func == 'mse':
-                        self.print_error = self.mean_squared_error(prediction_vector, y_train_subset)
-                    elif self.cost_func == 'log-loss':
-                        self.print_error = self.log_loss_error(prediction_vector, y_train_subset)
-
-                    # adding current model error to log
-                    self.error_log[error_log_index] = self.print_error
-
-                # updating params via gradient descent + backpropagation
+                #incrementing the error log index
+                error_log_index+=1
+                #pulling the x & y data vectors from our train_batch_subset
                 x_train_batch = train_data_subset[:, :self.train_split_index]
                 y_train_batch = train_data_subset[:, self.train_split_index:]
+                #pulling our model predictions on the x_data vectors from our train_batch_subset
+                prediction_matrix = self.predict(x_train_batch)
+                #calculating batch error
+                if self.cost_func == 'mse':
+                    batch_error = self.mean_squared_error(prediction_matrix, y_train_batch)
+                elif self.cost_func == 'log-loss':
+                    batch_error = self.log_loss_error(prediction_matrix, y_train_batch)
+                # adding current model error to log
+                self.error_log[error_log_index] = batch_error
+                # updating params via gradient descent + backpropagation
                 self.backpropagation(x_train_batch, prediction_matrix, y_train_batch)
 
-
             # printing error after each epoch nth epoch number
-            print(f'Epoch #: {epoch + 1} | Most Recent Error" {self.print_error}')
+            print(f'Epoch #: {epoch + 1} | Latest Error" {self.error_log[error_log_index]}')
 
     def predict(self, x_input_vec):
         """
         this method yields a model prediction array for the provided x_input_vec
         pass x_inputs in the form:
-        [x inputs 1]
-        [x inputs 2]
-        [x inputs n]
+        [[x inputs 1]
+         [x inputs 2]
+         [x inputs n]]
         """
         # catching bad input data dimensions
         if x_input_vec.ndim == 1 or len(x_input_vec.shape) != 2:
             raise Exception('X_inputs vector must be 2-D np array. '
                             'Each row corresponds to the x variable observations for a single sample!')
 
-        # creating our function to return model predictions for given x_input_vector in column form
+        # creating function to return model predictions for given x_input_vector in column form
         def push_output(input_vector):
             # this function passes the initial input vector through the entire network.
             # Returns the prediction vector from our network's output layer
@@ -236,11 +216,8 @@ class Network:
         Return 2d vector dimensions are n x 1 (column vector)
         """
 
-        # making sure this returns a 2d n X 1 column vector of errors
-
         error_gradients = (np.mean((-2*(y_observation_vector - y_predictions_vector)),axis=0)).T
         return error_gradients.reshape(error_gradients.shape[0],-1)
-
 
     def log_loss_error(self, y_predictions_vector, y_observation_vector):
         """
@@ -317,64 +294,3 @@ class Network:
     def __repr__(self):
         return f'Network trained with {self.cost_func} Cost Function. Layers: \n' \
                f'{self.network}'
-
-
-if __name__ == '__main__':
-    """
-    Testing our our new mini-batch GD
-    """
-
-    from keras.datasets import mnist
-    from keras.utils import np_utils
-
-    # load MNIST from server
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
-
-    # reshaping & normalizing x_train data
-    x_train = x_train.reshape(x_train.shape[0], 1, 28 * 28)
-    x_train = x_train.astype('float32')
-    x_train /= 255
-
-    # hot encoding y_train vector
-    y_train = np_utils.to_categorical(y_train)
-
-    # reshaping & normalizing y_train data
-    x_test = x_test.reshape(x_test.shape[0], 1, 28 * 28)
-    x_test = x_test.astype('float32')
-    x_test /= 255
-    y_test = np_utils.to_categorical(y_test)
-
-    # taking 4000 sub-samples:
-    x_train_trunc = x_train[0:4000]
-    y_train_trunc = y_train[0:4000]
-
-    # testing on 50 samples
-    x_test_trunc = x_test[0:400]
-    y_test_trunc = y_test[0:400]
-
-    # reshaping data to conform to our model 2d np array standards
-    x_train_trunc = np.reshape(x_train_trunc, (x_train_trunc.shape[0], x_train_trunc.shape[2]))
-    # y_train_trunc = np.reshape(y_train_trunc, (y_train_trunc.shape[0], y_train_trunc.shape[2]))
-    x_test_trunc = np.reshape(x_test_trunc, (x_test_trunc.shape[0], x_test_trunc.shape[2]))
-    # y_test_trunc =  np.reshape(y_test_trunc, (y_test_trunc.shape[0], y_test_trunc.shape[2]))
-
-    # creating our model
-    model = Network('log-loss', x_train_trunc, y_train_trunc, x_test_trunc, y_test_trunc, x_features=784, epoch_num=35,
-                    layer_num=3, layer_depths=[100, 50, 10], batch_num=4000, learn_rate=0.01)
-
-    # adding our tangent hyperbolic hidden layers
-    model.add_Layer('relu', 'initial_hidden')
-    model.add_Layer('relu', 'hidden')
-
-    # adding output layer
-    model.add_Layer('sigmoid', 'output')
-
-    # training model
-    model.train()
-
-    # plotting model error while training
-    model.plot_train_error()
-
-    # printing model predictions for some test samples
-    model.test_multinomial_classification()
-
