@@ -1,5 +1,5 @@
-# TODO Implement Parameter Regularization Techniques (ex: Neuron Dropout)
-# TODO Implement Softmax for Multinomial Classification
+# Future Goal 1 --> Implement Parameter Regularization Techniques (ex: Neuron Dropout)
+# Future Goal 2 --> Implement Softmax for Multinomial Classification
 
 # making necessary imports
 import numpy as np
@@ -19,7 +19,9 @@ class Network:
 
     def __init__(self, cost_func, x_train, y_train, x_test, y_test, x_features, epoch_num, layer_num,
                  layer_depths, batch_num, learn_rate):
-        # init appropriate IVs
+        """
+        Constructor to Initialize appropriate Model Instance Variables
+        """
         if cost_func.lower() not in ('mse', 'log-loss'):
             raise Exception('Must Provide a Valid Model Cost Function')
         else:
@@ -203,14 +205,16 @@ class Network:
                     curr_layer.update_biases(self.learn_rate)
                     curr_layer.update_weights(self.learn_rate, weight_partial)
 
-    def mean_squared_error(self, y_predictions_vector, y_observation_vector):
+    @staticmethod
+    def mean_squared_error(y_predictions_vector, y_observation_vector):
         """
         This function returns the mean squared error associated with our model's prediction
         Used for printing how our model is fitting to the data each epoc (regression)
         """
         return np.mean(np.sum((y_observation_vector - y_predictions_vector) ** 2))
 
-    def mse_prime(self, y_predictions_vector, y_observation_vector):
+    @staticmethod
+    def mse_prime(y_predictions_vector, y_observation_vector):
         """
         Returns the single sample derivative of mse w.r.t the y_predictions_vector. Used in backpropagation
         Return 2d vector dimensions are n x 1 (column vector)
@@ -219,7 +223,8 @@ class Network:
         error_gradients = (np.mean((-2*(y_observation_vector - y_predictions_vector)), axis=0)).T
         return error_gradients.reshape(error_gradients.shape[0], -1)
 
-    def log_loss_error(self, y_predictions_vector, y_observation_vector):
+    @staticmethod
+    def log_loss_error(y_predictions_vector, y_observation_vector):
         """
         This function returns the log loss error associated with our prediction vector
         Used for printing how our model is fitting to the data each epoc (classification)
@@ -227,7 +232,8 @@ class Network:
         return -1 * np.mean(y_observation_vector * np.log(y_predictions_vector) + (1 - y_observation_vector) * np.log(
             1 - y_predictions_vector))
 
-    def log_loss_prime(self, y_predictions_vector, y_observation_vector):
+    @staticmethod
+    def log_loss_prime(y_predictions_vector, y_observation_vector):
         """
         This function returns the derivative of log loss w.r.t the y_predictions_vector. Used in backpropagation
         """
