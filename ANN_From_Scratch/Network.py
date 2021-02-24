@@ -1,13 +1,3 @@
-"""
-This script contains the Macro Network Class for our fully connected ANN
-This ANN performs both Binary classification, Multinomial Classification, and regression
-
-DATA ENTRY NOTE:
-all x/y train & test data must be passed as 2D np arrays
-each row corresponds to the x input vector of a single y train/test samples
-data must always be of form a x b where a is the number of samples and b is the number of features
-"""
-
 # TODO Implement Parameter Regularization Techniques (ex: Neuron Dropout)
 # TODO Implement Softmax for Multinomial Classification
 
@@ -18,6 +8,14 @@ from Layer import Layer
 
 
 class Network:
+    """
+    This Class models a Fully Connected ANN.
+    The NN can perform both Binary classification, Multinomial Classification, & Regression
+
+    DATA ENTRY NOTE:
+    all x/y train & test data must be passed as 2D np arrays!
+    Each row holds the x/y data for a single test/train tsample
+    """
 
     def __init__(self, cost_func, x_train, y_train, x_test, y_test, x_features, epoch_num, layer_num,
                  layer_depths, batch_num, learn_rate):
@@ -131,8 +129,10 @@ class Network:
 
         # creating function to return model predictions for given x_input_vector in column form
         def push_output(input_vector):
-            # this function passes the initial input vector through the entire network.
-            # Returns the prediction vector from our network's output layer
+            """
+            this function passes the initial input vector through the entire network.
+            Returns the prediction vector from our network's output layer
+            """
             output = input_vector
             for layer in self.network:
                 output = layer.gen_output_vector(output)
