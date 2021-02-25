@@ -1,5 +1,7 @@
-# Future Goal 1 --> Implement Parameter Regularization Techniques (ex: Neuron Dropout)
-# Future Goal 2 --> Implement Softmax for Multinomial Classification
+# Future Goal 1 --> Implement Parameter Regularization Techniques (ex: Neuron Dropout/L1/L2)
+# Future Goal 2 --> Implement Full Softmax for Multinomial Classification
+# Future Goal 3 --> Implement Gradient Descent w/ Momentum
+# Future Goal 4 --> Implement ADAM Optimizer
 
 # making necessary imports
 import numpy as np
