@@ -2,6 +2,10 @@
 # Future Goal 2 --> Implement Full Softmax for Multinomial Classification
 # Future Goal 3 --> Implement Gradient Descent w/ Momentum
 # Future Goal 4 --> Implement ADAM Optimizer
+# Future Goal 5 --> Implement Adaptive Learning Rates
+# Future Goal 6 --> Implement Batch Normalization
+# Future Goal 7 --> Implement Validation Data Support (plotting)
+
 
 # making necessary imports
 import numpy as np
