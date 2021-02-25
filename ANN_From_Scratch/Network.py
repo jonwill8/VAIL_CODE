@@ -4,7 +4,8 @@
 # Future Goal 4 --> Implement ADAM Optimizer
 # Future Goal 5 --> Implement Adaptive Learning Rates
 # Future Goal 6 --> Implement Batch Normalization
-# Future Goal 7 --> Implement Validation Data Support (plotting)
+# Future Goal 7 --> Implement Validation Data Error Plotting
+# Future Goal 8 --> Implement Hyperparameter Grid Search
 
 
 # making necessary imports
